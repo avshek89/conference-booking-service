@@ -1,22 +1,16 @@
 package com.conference.booking.entity;
 
-import java.time.LocalDateTime;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
 
+import java.time.LocalDateTime;
+@NoArgsConstructor
+@Getter
+@ToString
 public class BookingRequest {
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private int numberOfPeople;
-
-    public LocalDateTime getStartTime() {
-        return startTime;
-    }
-
-    public LocalDateTime getEndTime() {
-        return endTime;
-    }
-
-    public int getNumberOfPeople() {
-        return numberOfPeople;
-    }
 }
 
