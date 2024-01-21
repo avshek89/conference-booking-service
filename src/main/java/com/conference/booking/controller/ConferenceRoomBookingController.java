@@ -22,12 +22,14 @@ public class ConferenceRoomBookingController {
         this.conferenceRoomBookingService = conferenceRoomBookingService;
     }
 
+    // API to book the available room
     @PostMapping("/book")
     public ResponseEntity<Booking> bookConferenceRoom(@RequestBody BookingRequest request) {
         Booking booking =  conferenceRoomBookingService.bookConferenceRoom(request.getStartTime(),request.getEndTime(),request.getNumberOfPeople());
         return new ResponseEntity<>(booking, HttpStatus.OK);
     }
 
+    // API to get the available room details
     @GetMapping("/available")
     public ResponseEntity<List<ConferenceRoom>> getAvailableConferenceRooms(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startTime, @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)LocalDateTime endTime) {

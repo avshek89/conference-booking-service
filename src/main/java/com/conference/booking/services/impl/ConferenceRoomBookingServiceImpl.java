@@ -19,6 +19,7 @@ public class ConferenceRoomBookingServiceImpl implements ConferenceRoomBookingSe
         private List<Booking> bookings;
 
 
+    // Create Conference Room
     @PostConstruct
     private void postConstruct() {
         ConferenceRoom amaze = new ConferenceRoom("Amaze", 3, new HashSet<>(Arrays.asList("09:00-09:15", "13:00-13:15", "17:00-17:15")));
@@ -27,7 +28,7 @@ public class ConferenceRoomBookingServiceImpl implements ConferenceRoomBookingSe
         ConferenceRoom strive = new ConferenceRoom("Strive", 20, new HashSet<>(Arrays.asList("09:00-09:15", "13:00-13:15", "17:00-17:15")));
         conferenceRooms = Arrays.asList(amaze, beauty, inspire, strive);
     }
-        // Implement methods from ConferenceRoomBookingService
+
         @Override
         public Booking bookConferenceRoom(LocalDateTime startTime, LocalDateTime endTime, int numberOfPeople) {
             // Check if booking time is within maintenance hours
@@ -61,8 +62,6 @@ public class ConferenceRoomBookingServiceImpl implements ConferenceRoomBookingSe
         // Helper methods
         private boolean isDuringMaintenance(LocalDateTime startTime, LocalDateTime endTime) {
             // Check if the booking overlaps with maintenance hours
-            // Implementation of this method depends on the specific time intervals for maintenance
-            // let's assume maintenanceTimings is a set of Strings representing intervals like "9:00-9:15"
             for (String maintenanceTiming : conferenceRooms.get(0).getMaintenanceTimings()) {
                 String[] timing = maintenanceTiming.split("-");
                 LocalDateTime maintenanceStart = LocalDateTime.parse(startTime.toLocalDate() + "T" + timing[0]);
@@ -76,8 +75,6 @@ public class ConferenceRoomBookingServiceImpl implements ConferenceRoomBookingSe
 
     private void validateBookingTime(LocalDateTime startTime, LocalDateTime endTime) {
             // Check if booking time is on the current date and in 15-min intervals
-            // Implementation of this method depends on your specific requirements
-            // For simplicity, let's assume a basic check for the current date and 15-min intervals
             LocalDateTime currentDate = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0).withNano(0);
             if (!startTime.toLocalDate().equals(currentDate.toLocalDate())) {
                 throw new IllegalArgumentException("Booking can only be done for the current date.");
@@ -90,7 +87,6 @@ public class ConferenceRoomBookingServiceImpl implements ConferenceRoomBookingSe
 
         private ConferenceRoom findAvailableRoom(LocalDateTime startTime, LocalDateTime endTime, int numberOfPeople) {
             // Find the first available room based on capacity
-            // You may need a more sophisticated algorithm based on your actual requirements
             for (ConferenceRoom room : conferenceRooms) {
                 if (room.getCapacity() >= numberOfPeople && isRoomAvailable(room, startTime, endTime)) {
                     return room;
@@ -101,8 +97,6 @@ public class ConferenceRoomBookingServiceImpl implements ConferenceRoomBookingSe
 
         private boolean isRoomAvailable(ConferenceRoom room, LocalDateTime startTime, LocalDateTime endTime) {
             // Check if the room is available for the specified time range
-            // Implementation of this method depends on your specific requirements
-            // For simplicity, let's assume a basic check for existing bookings
             for (Booking booking : bookings) {
                 if (booking.getConferenceRoom().equals(room) &&
                         !(endTime.isBefore(booking.getStartTime()) || startTime.isAfter(booking.getEndTime()))) {
