@@ -3,6 +3,7 @@ package com.conference.booking.entity;
 import java.util.Set;
 import lombok.*;
 @NoArgsConstructor
+@AllArgsConstructor
 @Getter
 @ToString
 public class ConferenceRoom {

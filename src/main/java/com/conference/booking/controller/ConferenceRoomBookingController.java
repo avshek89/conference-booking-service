@@ -4,6 +4,7 @@ import com.conference.booking.entity.Booking;
 import com.conference.booking.entity.BookingRequest;
 import com.conference.booking.entity.ConferenceRoom;
 import com.conference.booking.services.ConferenceRoomBookingService;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -29,7 +30,7 @@ public class ConferenceRoomBookingController {
 
     @GetMapping("/available")
     public ResponseEntity<List<ConferenceRoom>> getAvailableConferenceRooms(
-            @RequestParam LocalDateTime startTime, @RequestParam LocalDateTime endTime) {
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startTime, @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)LocalDateTime endTime) {
         List<ConferenceRoom> availableBooking =  conferenceRoomBookingService.getAvailableConferenceRooms(startTime,endTime);
         return new ResponseEntity<>(availableBooking, HttpStatus.OK);
     }

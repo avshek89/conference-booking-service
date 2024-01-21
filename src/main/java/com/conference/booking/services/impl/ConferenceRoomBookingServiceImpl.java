@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.PostConstruct;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -18,6 +19,14 @@ public class ConferenceRoomBookingServiceImpl implements ConferenceRoomBookingSe
         private List<Booking> bookings;
 
 
+    @PostConstruct
+    private void postConstruct() {
+        ConferenceRoom amaze = new ConferenceRoom("Amaze", 3, new HashSet<>(Arrays.asList("09:00-09:15", "13:00-13:15", "17:00-17:15")));
+        ConferenceRoom beauty = new ConferenceRoom("Beauty", 7, new HashSet<>(Arrays.asList("09:00-09:15", "13:00-13:15", "17:00-17:15")));
+        ConferenceRoom inspire = new ConferenceRoom("Inspire", 12, new HashSet<>(Arrays.asList("09:00-09:15", "13:00-13:15", "17:00-17:15")));
+        ConferenceRoom strive = new ConferenceRoom("Strive", 20, new HashSet<>(Arrays.asList("09:00-09:15", "13:00-13:15", "17:00-17:15")));
+        conferenceRooms = Arrays.asList(amaze, beauty, inspire, strive);
+    }
         // Implement methods from ConferenceRoomBookingService
         @Override
         public Booking bookConferenceRoom(LocalDateTime startTime, LocalDateTime endTime, int numberOfPeople) {
@@ -58,7 +67,6 @@ public class ConferenceRoomBookingServiceImpl implements ConferenceRoomBookingSe
                 String[] timing = maintenanceTiming.split("-");
                 LocalDateTime maintenanceStart = LocalDateTime.parse(startTime.toLocalDate() + "T" + timing[0]);
                 LocalDateTime maintenanceEnd = LocalDateTime.parse(startTime.toLocalDate() + "T" + timing[1]);
-
                 if (!(endTime.isBefore(maintenanceStart) || startTime.isAfter(maintenanceEnd))) {
                     return true;
                 }
@@ -66,7 +74,7 @@ public class ConferenceRoomBookingServiceImpl implements ConferenceRoomBookingSe
             return false;
         }
 
-        private void validateBookingTime(LocalDateTime startTime, LocalDateTime endTime) {
+    private void validateBookingTime(LocalDateTime startTime, LocalDateTime endTime) {
             // Check if booking time is on the current date and in 15-min intervals
             // Implementation of this method depends on your specific requirements
             // For simplicity, let's assume a basic check for the current date and 15-min intervals

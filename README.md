@@ -1,1 +1,4 @@
 # conference-booking-service
+# SampleRequest--> GET : http://localhost:8080/api/v1/conference-room/available?startTime=2024-01-21T14:30&endTime=2024-01-21T14:45
+# Sample Response--> [{"name":"Amaze","capacity":3,"maintenanceTimings":["09:00-09:15","13:00-13:15","17:00-17:15"]},{"name":"Inspire","capacity":12,"maintenanceTimings":["09:00-09:15","13:00-13:15","17:00-17:15"]},{"name":"Strive","capacity":20,"maintenanceTimings":["09:00-09:15","13:00-13:15","17:00-17:15"]}]
+# SampleRequest--> POST : http://localhost:8080/api/v1/conference-room/book { "startTime":"2024-01-21T14:30","endTime":"2024-01-21T14:45","numberOfPeople":"7"}
