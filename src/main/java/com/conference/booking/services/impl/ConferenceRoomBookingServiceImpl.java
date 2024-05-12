@@ -1,109 +1,170 @@
 package com.conference.booking.services.impl;
 
-import com.conference.booking.entity.Booking;
-import com.conference.booking.entity.ConferenceRoom;
+import com.conference.booking.constant.ApiConstants;
+import com.conference.booking.entity.ConferenceBookingEntity;
+import com.conference.booking.entity.ConferenceRoomEntity;
+import com.conference.booking.model.*;
+import com.conference.booking.repository.BookingRepository;
+import com.conference.booking.repository.ConferenceRoomRepository;
 import com.conference.booking.services.ConferenceRoomBookingService;
+import com.conference.booking.util.Utils;
+import com.conference.booking.validator.BookingTimeValidator;
+import com.conference.booking.validator.MaintenanceSlotValidator;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
-
-import javax.annotation.PostConstruct;
-import java.time.LocalDateTime;
-import java.util.*;
+import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
+import static com.conference.booking.constant.ApiConstants.BOOKING_SUCCESS;
+import static com.conference.booking.constant.ApiConstants.FUNCTIONAL;
+import static com.conference.booking.enums.ResponseStatus.SUCCESS;
+import static com.conference.booking.util.Utils.*;
+import static java.util.Collections.emptyList;
+import static org.springframework.util.CollectionUtils.isEmpty;
+
 @Service
 @AllArgsConstructor
 @Slf4j
 public class ConferenceRoomBookingServiceImpl implements ConferenceRoomBookingService {
-        private List<ConferenceRoom> conferenceRooms;
-        private List<Booking> bookings;
+        private final BookingRepository rookingRepository;
+        private final ConferenceRoomRepository conferenceRoomRepository;
+        private final MaintenanceSlotValidator maintenanceSlotValidator;
+        private final BookingTimeValidator bookingTimeValidator;
 
 
-    // Create Conference Room
-    @PostConstruct
-    private void postConstruct() {
-        ConferenceRoom amaze = new ConferenceRoom("Amaze", 3, new HashSet<>(Arrays.asList("09:00-09:15", "13:00-13:15", "17:00-17:15")));
-        ConferenceRoom beauty = new ConferenceRoom("Beauty", 7, new HashSet<>(Arrays.asList("09:00-09:15", "13:00-13:15", "17:00-17:15")));
-        ConferenceRoom inspire = new ConferenceRoom("Inspire", 12, new HashSet<>(Arrays.asList("09:00-09:15", "13:00-13:15", "17:00-17:15")));
-        ConferenceRoom strive = new ConferenceRoom("Strive", 20, new HashSet<>(Arrays.asList("09:00-09:15", "13:00-13:15", "17:00-17:15")));
-        conferenceRooms = Arrays.asList(amaze, beauty, inspire, strive);
+        @Override
+        public Response<Booking> bookConferenceRoom(BookingRequest bookingRequest) {
+
+            validateBookingRequest(bookingRequest);
+            List<ConferenceBookingEntity> allBookingEntity = rookingRepository.findBookedRoomByTime(toSqlTime(bookingRequest.getStartTime()),
+                    toSqlTime(bookingRequest.getEndTime()));
+            List<Booking> bookings = buildReservations(allBookingEntity);
+            List<ConferenceRoom> allConferenceRooms = retrieveAllRooms();
+            Optional<ConferenceRoom> conferenceRoom = findAvailableRoom(bookings, bookingRequest.getNumberOfParticipants(), allConferenceRooms);
+            if (conferenceRoom.isEmpty()) {
+                return buildErrorResponse(ApiConstants.NO_AVAILABLE_ROOMS,FUNCTIONAL);
+            }
+            ConferenceRoomEntity roomEntity = getAvailableRoomEntity(conferenceRoom.get()).orElse(null);
+            ConferenceBookingEntity conferenceBookingEntity = mapToEntity(bookingRequest, roomEntity);
+            rookingRepository.save(conferenceBookingEntity);
+            log.info("Booking successfully completed");
+            return buildSuccessResponse(buildBookingResponse(conferenceBookingEntity), BOOKING_SUCCESS);
+        }
+
+    @Override
+    public Response<AvailableConferenceRoom> getAvailableConferenceRooms(String start, String end) {
+        validateBookingTime(TimeSlotRequest.builder().startTime(start).endTime(end).build());
+        List<ConferenceBookingEntity> allBookingEntity = rookingRepository.findBookedRoomByTime(toSqlTime(start),
+                toSqlTime(end));
+        List<Booking> bookings = buildReservations(allBookingEntity);
+        List<ConferenceRoom> allConferenceRooms = retrieveAllRooms();
+        List<ConferenceRoom> availableConferenceRoom = findAvailableRooms(bookings, allConferenceRooms);
+        if (availableConferenceRoom.isEmpty()) {
+            return buildErrorResponse(ApiConstants.NO_AVAILABLE_ROOMS,FUNCTIONAL);
+        }
+        AvailableConferenceRoom roomAvailabilityResponse = buildRoomAvailabilityResponse(allConferenceRooms);
+        return buildSuccessResponse(roomAvailabilityResponse);
     }
 
-        @Override
-        public Booking bookConferenceRoom(LocalDateTime startTime, LocalDateTime endTime, int numberOfPeople) {
-            // Check if booking time is within maintenance hours
-            if (isDuringMaintenance(startTime, endTime)) {
-                throw new IllegalArgumentException("Booking cannot be done during maintenance hours.");
-            }
-            // Check if booking time is valid (current date, 15-min intervals)
-            validateBookingTime(startTime, endTime);
-            // Find an available room based on capacity
-            ConferenceRoom availableRoom = findAvailableRoom(startTime, endTime, numberOfPeople);
-            // Create and add a new booking
-            Booking newBooking = new Booking(startTime, endTime, numberOfPeople, availableRoom);
-            bookings.add(newBooking);
+    public static AvailableConferenceRoom buildRoomAvailabilityResponse(List<ConferenceRoom> rooms) {
+        return AvailableConferenceRoom.builder()
+                .availableConferenceRooms(rooms)
+                .build();
+    }
 
-            return newBooking;
+    public static Optional<ConferenceRoom> findAvailableRoom(List<Booking> bookings,
+                     int numberOfParticipants, List<ConferenceRoom> rooms) {
+        if (isEmpty(bookings)) {
+            return isRoomAvailable(numberOfParticipants, rooms);
         }
 
-        @Override
-        public List<ConferenceRoom> getAvailableConferenceRooms(LocalDateTime startTime, LocalDateTime endTime) {
-            // Check if requested time is during maintenance
-            if (isDuringMaintenance(startTime, endTime)) {
-                throw new IllegalArgumentException("Requested time is during maintenance hours.");
-            }
+        List<ConferenceRoom> bookedRooms = findBookedRooms(bookings);
+        rooms.removeAll(bookedRooms);
+        return isRoomAvailable(numberOfParticipants, rooms);
+    }
+    private static Optional<ConferenceRoom> isRoomAvailable(int numberOfParticipants, List<ConferenceRoom> rooms) {
+        return rooms.stream()
+                .filter(room -> numberOfParticipants <= room.getCapacity())
+                .findFirst();
+    }
 
-            // Filter available rooms based on existing bookings
-            return conferenceRooms.stream()
-                    .filter(room -> isRoomAvailable(room, startTime, endTime))
-                    .collect(Collectors.toList());
+   private void validateBookingRequest(BookingRequest bookingRequest) {
+       log.info("validateBookingRequest >> bookingRequest {} ",bookingRequest);
+       validateBookingTime(bookingRequest);
+   }
+    private void validateBookingTime(TimeSlotRequest timeSlotRequest) {
+               bookingTimeValidator.validate(timeSlotRequest);
+               maintenanceSlotValidator.validate(timeSlotRequest);
+    }
+    private List<ConferenceRoom> retrieveAllRooms() {
+        List<ConferenceRoomEntity> rooms = fetchAllRooms();
+        return buildRooms(rooms);
+    }
+    @Cacheable
+    private List<ConferenceRoomEntity> fetchAllRooms() {
+        return conferenceRoomRepository.findAllByOrderByCapacityAsc();
+    }
+    public static List<ConferenceRoom> buildRooms(List<ConferenceRoomEntity> rooms) {
+        return rooms.stream()
+                .map(Utils::buildRoom)
+                .collect(Collectors.toList());
+    }
+
+  /*  private static ConferenceRoom buildRoom(String room) {
+        return ConferenceRoom.builder()
+                .name(room)
+                .build();
+    }*/
+
+    public static List<Booking> buildReservations(List<ConferenceBookingEntity> reservations) {
+        if (isEmpty(reservations)) {
+            return emptyList();
         }
 
-        // Helper methods
-        private boolean isDuringMaintenance(LocalDateTime startTime, LocalDateTime endTime) {
-            // Check if the booking overlaps with maintenance hours
-            for (String maintenanceTiming : conferenceRooms.get(0).getMaintenanceTimings()) {
-                String[] timing = maintenanceTiming.split("-");
-                LocalDateTime maintenanceStart = LocalDateTime.parse(startTime.toLocalDate() + "T" + timing[0]);
-                LocalDateTime maintenanceEnd = LocalDateTime.parse(startTime.toLocalDate() + "T" + timing[1]);
-                if (!(endTime.isBefore(maintenanceStart) || startTime.isAfter(maintenanceEnd))) {
-                    return true;
-                }
-            }
-            return false;
+        return reservations.stream()
+                .map(Utils::buildReservation)
+                .collect(Collectors.toList());
+    }
+
+    public static List<ConferenceRoom> findAvailableRooms(List<Booking> bookings, List<ConferenceRoom> rooms) {
+        if (isEmpty(bookings)) {
+            return rooms;
         }
 
-    private void validateBookingTime(LocalDateTime startTime, LocalDateTime endTime) {
-            // Check if booking time is on the current date and in 15-min intervals
-            LocalDateTime currentDate = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0).withNano(0);
-            if (!startTime.toLocalDate().equals(currentDate.toLocalDate())) {
-                throw new IllegalArgumentException("Booking can only be done for the current date.");
-            }
+        List<ConferenceRoom> reservedRooms = findBookedRooms(bookings);
+        rooms.removeAll(reservedRooms);
+        return rooms;
+    }
+    private static List<ConferenceRoom> findBookedRooms(List<Booking> bookings) {
+        return bookings.stream()
+                .map(Booking::getConferenceRoom)
+                .distinct()
+                .collect(Collectors.toList());
+    }
+    private Optional<ConferenceRoomEntity> getAvailableRoomEntity(ConferenceRoom conferenceRoom) {
+        return fetchAllRooms().stream()
+                .filter(roomEntity -> roomEntity.getRoomId() == conferenceRoom.getRoomNumber())
+                .findFirst();
+    }
+    public static Booking buildBookingResponse(ConferenceBookingEntity bookingEntity) {
+        return Booking.builder()
+                .conferenceRoom(ConferenceRoom.builder().name(bookingEntity.getConferenceRoom().getName()).roomNumber(bookingEntity.getBookingId()).capacity(bookingEntity.getNumberOfParticipants()).build())
+                .slot(Slot.builder().startTime(toLocalTime(bookingEntity.getStartTime())).endTime(toLocalTime(bookingEntity.getEndTime())).build())
+                .build();
+    }
+    public static <T> Response<T> buildSuccessResponse(T data, String message) {
+        Response<T> response = buildSuccessResponse(data);
+        response.setMessage(message);
+        return response;
+    }
 
-            if (startTime.getMinute() % 15 != 0 || endTime.getMinute() % 15 != 0) {
-                throw new IllegalArgumentException("Booking should be in intervals of 15 minutes.");
-            }
-        }
-
-        private ConferenceRoom findAvailableRoom(LocalDateTime startTime, LocalDateTime endTime, int numberOfPeople) {
-            // Find the first available room based on capacity
-            for (ConferenceRoom room : conferenceRooms) {
-                if (room.getCapacity() >= numberOfPeople && isRoomAvailable(room, startTime, endTime)) {
-                    return room;
-                }
-            }
-            throw new IllegalStateException("No available room for the specified time and capacity.");
-        }
-
-        private boolean isRoomAvailable(ConferenceRoom room, LocalDateTime startTime, LocalDateTime endTime) {
-            // Check if the room is available for the specified time range
-            for (Booking booking : bookings) {
-                if (booking.getConferenceRoom().equals(room) &&
-                        !(endTime.isBefore(booking.getStartTime()) || startTime.isAfter(booking.getEndTime()))) {
-                    return false;
-                }
-            }
-            return true;
-        }
+    public static <T> Response<T> buildSuccessResponse(T data) {
+        return Response.<T>builder()
+                .data(data)
+                .status(SUCCESS)
+                .build();
+    }
 }
 

@@ -1,12 +1,10 @@
 package com.conference.booking.services;
-import com.conference.booking.entity.Booking;
-import com.conference.booking.entity.ConferenceRoom;
+import com.conference.booking.model.*;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 public interface ConferenceRoomBookingService {
+    Response<Booking> bookConferenceRoom(BookingRequest bookingRequest);
+    Response<AvailableConferenceRoom> getAvailableConferenceRooms(String startTime, String endTime);
 
-    Booking bookConferenceRoom(LocalDateTime startTime, LocalDateTime endTime, int numberOfPeople);
-    List<ConferenceRoom> getAvailableConferenceRooms(LocalDateTime startTime, LocalDateTime endTime);
 }
