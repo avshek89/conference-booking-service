@@ -35,7 +35,7 @@ public class ConferenceRoomBookingServiceImpl implements ConferenceRoomBookingSe
         validateBookingRequest(bookingRequest);
         List<ConferenceBookingEntity> allBookingEntity = rookingRepository.findBookedRoomByTime(toSqlTime(bookingRequest.getStartTime()),
                 toSqlTime(bookingRequest.getEndTime()));
-        List<Booking> bookings = buildReservations(allBookingEntity);
+        List<Booking> bookings = buildBookings(allBookingEntity);
         List<ConferenceRoom> allConferenceRooms = retrieveAllRooms();
         Optional<ConferenceRoom> conferenceRoom = findAvailableRoom(bookings, bookingRequest.getNumberOfParticipants(), allConferenceRooms);
         if (conferenceRoom.isEmpty()) {
@@ -53,7 +53,7 @@ public class ConferenceRoomBookingServiceImpl implements ConferenceRoomBookingSe
         validateBookingTime(TimeSlotRequest.builder().startTime(start).endTime(end).build());
         List<ConferenceBookingEntity> allBookingEntity = rookingRepository.findBookedRoomByTime(toSqlTime(start),
                 toSqlTime(end));
-        List<Booking> bookings = buildReservations(allBookingEntity);
+        List<Booking> bookings = buildBookings(allBookingEntity);
         List<ConferenceRoom> allConferenceRooms = retrieveAllRooms();
         List<ConferenceRoom> availableConferenceRoom = findAvailableRooms(bookings, allConferenceRooms);
         if (availableConferenceRoom.isEmpty()) {

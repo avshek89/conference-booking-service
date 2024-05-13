@@ -13,7 +13,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-
 import static com.conference.booking.enums.ResponseStatus.ERROR;
 import static com.conference.booking.enums.ResponseStatus.SUCCESS;
 import static java.time.temporal.ChronoUnit.MINUTES;
@@ -60,7 +59,7 @@ public class Utils {
                 .build();
     }
 
-    public static Booking buildReservation(ConferenceBookingEntity conferenceBookingEntity) {
+    public static Booking buildBooking(ConferenceBookingEntity conferenceBookingEntity) {
         return Booking.builder()
                 .conferenceRoom(buildRoom(conferenceBookingEntity.getConferenceRoom()))
                 .slot(buildPlan(conferenceBookingEntity.getStartTime(), conferenceBookingEntity.getEndTime()))
@@ -100,13 +99,13 @@ public class Utils {
                 .map(Utils::buildRoom)
                 .collect(Collectors.toList());
     }
-    public static List<Booking> buildReservations(List<ConferenceBookingEntity> reservations) {
-        if (isEmpty(reservations)) {
+    public static List<Booking> buildBookings(List<ConferenceBookingEntity> bookings) {
+        if (isEmpty(bookings)) {
             return emptyList();
         }
 
-        return reservations.stream()
-                .map(Utils::buildReservation)
+        return bookings.stream()
+                .map(Utils::buildBooking)
                 .collect(Collectors.toList());
     }
     public static List<ConferenceRoom> findAvailableRooms(List<Booking> bookings, List<ConferenceRoom> rooms) {
@@ -114,8 +113,8 @@ public class Utils {
             return rooms;
         }
 
-        List<ConferenceRoom> reservedRooms = findBookedRooms(bookings);
-        rooms.removeAll(reservedRooms);
+        List<ConferenceRoom> bookedRooms = findBookedRooms(bookings);
+        rooms.removeAll(bookedRooms);
         return rooms;
     }
     public static Booking buildBookingResponse(ConferenceBookingEntity bookingEntity) {
