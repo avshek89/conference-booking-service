@@ -10,7 +10,7 @@
 2. Book a conference Room
 
 # Conference Room Booking / inquiry APIs
-- [List available rooms](http://localhost:8080/api/v1/conference-room/available-rooms?startTime=<startTime>&endTime=<endTime>) GET
+- [Get list of available rooms](http://localhost:8080/api/v1/conference-room/available-rooms?startTime=<startTime>&endTime=<endTime>) GET
 - [Book conference room](http://localhost:8080/api/v1/conference-room/booking) POST
 
 # Notions
