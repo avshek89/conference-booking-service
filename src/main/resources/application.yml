@@ -15,7 +15,7 @@ spring:
       enabled: true
   datasource:
     platform: h2
-    url: jdbc:h2:mem:reservations
+    url: jdbc:h2:mem:bookings
   jpa:
     hibernate:
       ddl-auto: create-drop

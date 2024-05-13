@@ -1,5 +1,6 @@
 package com.conference.booking.controller;
 
+import com.conference.booking.annotation.TimeFormat;
 import com.conference.booking.model.*;
 import com.conference.booking.services.ConferenceRoomBookingService;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,7 +26,7 @@ public class BookingController {
     // API to get the available room details
     @GetMapping("/available-rooms")
     public ResponseEntity<Response<AvailableConferenceRoom>> getAvailableConferenceRooms(
-            @RequestParam String startTime, @RequestParam String endTime) {
+            @RequestParam @TimeFormat String startTime, @RequestParam @TimeFormat String endTime) {
         return ResponseEntity.ok(conferenceRoomBookingService.getAvailableConferenceRooms(startTime,endTime));
     }
 }
